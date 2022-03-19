@@ -11,8 +11,6 @@ CREATE TABLE user(
     password char(50) NULL
 )ENGINE=InnoDB;
 
-// 添加数据
-INSERT INTO user(username, password) VALUES('name', 'password');
 ```
 
 ```bash
