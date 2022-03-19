@@ -15,6 +15,6 @@ CREATE TABLE user(
 
 ```bash
 make
-./bin/server
+./server
 ```
 
