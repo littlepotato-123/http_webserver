@@ -4,10 +4,11 @@ using namespace std;
 Server::Server(
             int port, int trigMode, int timeoutMS, bool OptLinger,
             int sqlPort, const char* sqlUser, const  char* sqlPwd,
-            const char* dbName, int connPoolNum, int threadNum) :
+            const char* dbName, int connPoolNum, int threadNum,
+            bool openLog, int logQueSize):
             port_(port), openLinger_(OptLinger), timeoutMS_(timeoutMS), isClose_(false),
             timer_(new HeapTimer()), threadpool_(new ThreadPool(threadNum)), epoller_(new Epoller())
-{
+    {
     srcDir_ = getcwd(nullptr, 256);
     assert(srcDir_);
     strncat(srcDir_, "/resources/", 16);
@@ -18,13 +19,28 @@ Server::Server(
 
     InitEventMode_(trigMode);
     if(!InitSocket_()) { isClose_ = true;}
+
+    if(openLog) {
+        Log::Instance()->init("./log", ".log", logQueSize);
+        if(isClose_) { LOG_ERROR("========== Server init error!=========="); }
+        else {
+            LOG_INFO("========== Server init ==========");
+            LOG_INFO("Port:%d, OpenLinger: %s", port_, OptLinger? "true":"false");
+            LOG_INFO("Listen Mode: %s, OpenConn Mode: %s",
+                            (listenEvent_ & EPOLLET ? "ET": "LT"),
+                            (connEvent_ & EPOLLET ? "ET": "LT"));
+            LOG_INFO("LogSys level: %d", logLevel);
+            LOG_INFO("srcDir: %s", HttpConn::srcDir);
+            LOG_INFO("SqlConnPool num: %d, ThreadPool num: %d", connPoolNum, threadNum);
+        }
+    }
 }
 
 Server::~Server() {
     //printf("Server is disconstructing\n");
     close(listenFd_);
     isClose_ = true;
-    //free(srcDir_);
+    free(srcDir_);
     //SqlConnPool::Instance()->ClosePool();
 }
 
@@ -55,6 +71,7 @@ void Server::InitEventMode_(int trigMode) {
 
 void Server::Start(){
     int timeMS = -1;
+    if(!isClose_) { LOG_INFO("========== Server start =========="); }
     //auto begin_time = clock();
     while(!isClose_){
         
@@ -92,14 +109,19 @@ void Server::Start(){
             else if(events & EPOLLOUT) {
                // assert(users_.count(fd) > 0);
                 DealWrite_(weak_ptr<Conn>(users_[fd]));
-            } 
+            } else {
+                LOG_ERROR("Unexpected event");
+            }
         }
     }
 }
 
 void Server::SendError_(int fd, const char*info) {
     assert(fd > 0);
-    send(fd, info, strlen(info), 0);
+    int ret = send(fd, info, strlen(info), 0);
+    if(ret < 0) {
+        LOG_WARN("send error to client[%d] error!", fd);
+    }
     close(fd);
 }
 
@@ -110,6 +132,7 @@ void Server::CloseConn_(weak_ptr<Conn> wkclient) {
         if(client->GetIsClosed()) return;
         client->Close();
         fd = client->GetFd();
+        LOG_INFO("Client[%d] quit!", client->GetFd());
         //printf("closing client:%d ip:%s port:%d==================\n",client->GetFd(), client->GetIP(), client->GetPort());
         SendError_(client->GetFd(), "time out!");
         epoller_->DelFd(client->GetFd());
@@ -132,6 +155,7 @@ void Server::AddClient_(int fd, sockaddr_in addr) {
     }
     epoller_->AddFd(fd, EPOLLIN | connEvent_);
     SetFdNonblock(fd);
+    LOG_INFO("Client[%d] in!", users_[fd].GetFd());
 }
 
 void Server::DealListen_(){
@@ -143,6 +167,7 @@ void Server::DealListen_(){
         if(fd <= 0){return ;}
         else if(Conn::userCount >= MAX_FD){
             SendError_(fd, "Server busy!");
+            LOG_WARN("Clients is full!");
             return;
         }
         //printf("deal listen new connect fd = %d\n", fd);
@@ -228,6 +253,7 @@ bool Server::InitSocket_(){
     int ret;
     struct sockaddr_in addr;
     if(port_ > 65535 || port_ < 1024){
+        LOG_ERROR("Port:%d error!",  port_);
         return false;
     }
     addr.sin_family = AF_INET;
@@ -247,6 +273,7 @@ bool Server::InitSocket_(){
     ret = setsockopt(listenFd_, SOL_SOCKET, SO_LINGER, &optLinger, sizeof(optLinger));
     if(ret < 0){
         close(listenFd_);
+        LOG_ERROR("Init linger error!", port_);
         return false;
     }
 
@@ -254,26 +281,31 @@ bool Server::InitSocket_(){
     ret = setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval, sizeof(int));
     if(ret == -1){
         close(listenFd_);
+        LOG_ERROR("set socket setsockopt error !");
         return false;
     }
 
     ret = bind(listenFd_, (struct sockaddr *)&addr, sizeof(addr));
     if(ret < 0){
+        LOG_ERROR("Bind Port:%d error!", port_);
         close(listenFd_);
         return false;
     }
 
     ret = listen(listenFd_, 6);
     if(ret < 0){
+        LOG_ERROR("Listen port:%d error!", port_);
         close(listenFd_);
         return false;
     }
     ret = epoller_->AddFd(listenFd_, listenEvent_ | EPOLLIN);
     if(ret == 0){
+        LOG_ERROR("Add listen error!");
         close(listenFd_);
         return false;
     }
     SetFdNonblock(listenFd_);
+    LOG_INFO("Server port:%d", port_);
     return true;
 }
 

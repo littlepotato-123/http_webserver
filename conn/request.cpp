@@ -63,6 +63,7 @@ bool Request::parse(Buffer& buff) {
         buff.RetrieveUntil((const std::uint8_t*)lineEnd + 2);
         //printf("Parse发生段错误6\n");
     }
+    LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
     return 1;
 }
 
@@ -90,6 +91,7 @@ bool Request::ParseRequestLine_(const string& line) {
         state_ = HEADERS;
         return 1;
     }
+    LOG_ERROR("RequestLine Error");
     return 0;
 }
 
@@ -106,6 +108,7 @@ void Request::ParseBody_(const string& line) {
     body_ = line;
     ParsePost_();
     state_ = FINISH;
+    LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size());
 }
 
 int Request::ConverHex(char ch) {
@@ -119,6 +122,7 @@ void Request::ParsePost_() {
         ParseFromUrlencoded_();
         if(DEFAULT_HTML_TAG.count(path_)) {
             int tag = DEFAULT_HTML_TAG.find(path_)->second;
+            LOG_DEBUG("Tag:%d", tag);
             if(tag == 0 || tag == 1) {
                 bool isLogin = (tag == 1);
                 if(UserVerify(post_["username"], post_["password"], isLogin)) {
@@ -164,6 +168,7 @@ void Request::ParseFromUrlencoded_() {
             v = body_.substr(j, i - j);
             j = i + 1;
             post_[k] = v;
+            LOG_DEBUG("%s = %s", key.c_str(), value.c_str());
             //printf("ParseFromUrlencoded_发生段错误4\n");
             break;
         default:
@@ -181,6 +186,7 @@ void Request::ParseFromUrlencoded_() {
 
 bool Request::UserVerify(const string& name, const string& pwd, bool isLogin) {
     if(name == "" || pwd == " ") return 0;
+    LOG_INFO("Verify name:%s pwd:%s", name.c_str(), pwd.c_str());
     MYSQL* sql;
     //printf("1verify\n");
     sqlconnRAII sql_guard(&sql);
@@ -200,6 +206,7 @@ bool Request::UserVerify(const string& name, const string& pwd, bool isLogin) {
         getline(ss, query);
     }
     //printf("段错误1\n");
+    LOG_DEBUG("%s", query.data());
     if(mysql_query(sql, query.data())) {
         mysql_free_result(res);
         return false;
@@ -210,6 +217,7 @@ bool Request::UserVerify(const string& name, const string& pwd, bool isLogin) {
    //fields = mysql_fetch_field(res);
    //printf("3verify\n");
    while(MYSQL_ROW row = mysql_fetch_row(res)) {
+       LOG_DEBUG("MYSQL ROW: %s %s", row[0], row[1]);
        string username(row[0]);
        string password(row[1]);
        if(isLogin) {
@@ -217,28 +225,37 @@ bool Request::UserVerify(const string& name, const string& pwd, bool isLogin) {
            else {
                //密码错误
                flag = 0;
+               LOG_DEBUG("pwd error!");
            }
        }
        else {
            //重复使用名称
-           if(username == name) flag = 0;
+            if(username == name) {
+                flag = 0;
+                LOG_DEBUG("user used!");
+            }
+           
        }
    }
    mysql_free_result(res);
     //printf("4verify\n");
    if(!isLogin && flag) {
+       LOG_DEBUG("regirster!");
        query.clear();
-    {
-        stringstream ss;
-        ss<<"INSERT INTO user(username, password) VALUES('" << name << "','" << pwd << "')";
-        getline(ss, query);
-    }
+        {
+            stringstream ss;
+            ss<<"INSERT INTO user(username, password) VALUES('" << name << "','" << pwd << "')";
+            getline(ss, query);
+        }
+        LOG_DEBUG( "%s", query.data());
     if(mysql_query(sql, query.data())) {
+        LOG_DEBUG( "Insert error!");
         flag = 0;
     }
     flag = 1;
    }
    //printf("5verify\n");
+   LOG_DEBUG( "UserVerify success!!");
    return flag;
 }
 

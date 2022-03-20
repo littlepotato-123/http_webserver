@@ -9,6 +9,7 @@
 #include <mysql/mysql.h>  //mysql
 
 #include <sstream>
+#include "../log/log.h"
 #include "../pool/sqlconnRAII.h"
 #include "../buffer/buffer.h"
 //#include "../log/log.h"

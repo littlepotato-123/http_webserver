@@ -120,7 +120,7 @@ void Response::AddContent_(Buffer& buff) {
         ErrorContent(buff, "File NotFound!");
         return;
     }
-
+    LOG_DEBUG("file path %s", (srcDir_ + path_).data());
     int* mmRet = (int*)mmap(0, mmFileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
     if(*mmRet == -1) {
         ErrorContent(buff, "File NotFound!");

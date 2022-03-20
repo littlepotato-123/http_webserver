@@ -1,6 +1,7 @@
 #ifndef CONN_H
 #define CONN_H
 
+#include "../log/log.h"
 #include "request.h"
 #include "response.h"
 #include <string>

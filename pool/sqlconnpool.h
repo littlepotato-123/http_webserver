@@ -9,6 +9,7 @@
 #include <semaphore.h>
 #include <thread>
 #include <assert.h>
+#include "../log/log.h"
 
 class SqlConnPool {
 public:

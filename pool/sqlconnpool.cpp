@@ -16,10 +16,12 @@ void SqlConnPool::Init(const char* host, int port,
         sql = mysql_init(sql);
         if(!sql) {
              //printf("mysql init error!\n");
+            LOG_ERROR("MySql init error!");
             assert(sql);
         }
         sql = mysql_real_connect(sql, host, user, pwd, dbName, port, nullptr, 0);
         if(!sql){
+            LOG_ERROR("MySql Connect error!");
             //printf("mysql connect error!\n");
         }
         //printf("放进去的sql时空的吗？%d\n",(bool)(sql == nullptr));
@@ -36,6 +38,7 @@ MYSQL* SqlConnPool::GetConn() {
     unique_lock<mutex> locker(mtx_);
     while(connQue_.empty()) {
         //printf("sqlconnPool busy!\n");
+        LOG_WARN("SqlConnPool busy!");
         not_empty_.wait(locker);
     }    
     sql = connQue_.front();

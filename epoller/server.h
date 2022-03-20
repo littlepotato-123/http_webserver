@@ -17,12 +17,14 @@
 #include "../timer/heaptimer.h"
 #include "../pool/threadpool.h"
 #include "../conn/conn.h"
+#include "../log/log.h"
 #include "../pool/sqlconnpool.h"
 class Server {
 public:
-    Server( int port, int trigMode, int timeoutMS, bool OptLinger,
-            int sqlPort, const char* sqlUser, const  char* sqlPwd,
-            const char* dbName, int connPoolNum, int threadNum );
+    Server( int port, int trigMode, int timeoutMS, bool OptLinger, 
+        int sqlPort, const char* sqlUser, const  char* sqlPwd, 
+        const char* dbName, int connPoolNum, int threadNum,
+        bool openLog, int logLevel, int logQueSize);
 
     ~Server();
     void Start();

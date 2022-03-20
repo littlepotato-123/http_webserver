@@ -13,6 +13,7 @@ Conn::~Conn() {
     --userCount;
     close(fd_);
     Close();
+    LOG_INFO("Client[%d](%s:%d) quit, UserCount:%d", fd_, GetIP(), GetPort(), (int)userCount);
 }
 
 bool Conn::GetIsClosed() {
@@ -25,6 +26,7 @@ void Conn::init(int fd, const sockaddr_in& addr) {
     fd_ = fd;
     writeBuff_.RetrieveAll();
     readBuff_.RetrieveAll();
+    LOG_INFO("Client[%d](%s:%d) in, userCount:%d", fd_, GetIP(), GetPort(), (int)userCount);
     //isClose_ = false;
 }
 void Conn::Close() {
@@ -110,5 +112,6 @@ bool Conn::process() {
         iovCnt_ = 2;
     }
     //printf("makeresponse发生段错误3\n");
+     LOG_DEBUG("filesize:%d, %d  to %d", response_.FileLen() , iovCnt_, ToWriteBytes());
     return 1;
 }
