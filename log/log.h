@@ -67,7 +67,7 @@ private:
 #define LOG_BASE(level, format, ...) \
     do {\
         Log* log = Log::Instance();\
-        if (log->IsOpen() && log->GetLevel() <= level) {\
+        if (log->IsOpen() && log->GetLevel() >= level) {\
             log->write(level, format, ##__VA_ARGS__); \
             log->flush();\
         }\

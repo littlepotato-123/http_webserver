@@ -63,7 +63,7 @@ void Log::init( int level = 1, const char* path, const char* suffix, int maxQueu
     suffix_ = suffix;
     char fileName[LOG_NAME_LEN] = {0};
     snprintf(fileName, LOG_NAME_LEN - 1, "%s/%04d_%02d_%02d%s",
-            path_, t.tm_year + 1990, t.tm_mon + 1, t.tm_mday, suffix_);
+            path_, t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, suffix_);
     toDay_ = t.tm_mday;        
 
     {
