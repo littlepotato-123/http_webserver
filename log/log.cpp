@@ -4,9 +4,9 @@ using namespace std;
 
 Log Log::inst;
 
-Log::log() {
+Log::Log() {
     lineCount_ = 0;
-    isAsync = false;
+    isAsync_ = false;
     writeThread_ = nullptr;
     queue_ = nullptr;
     toDay_ = 0;
@@ -14,7 +14,7 @@ Log::log() {
     QueueSize = 0;
 }
 
-Log::~log() {
+Log::~Log() {
     unique_lock<mutex> locker(mtx_);
     if(writeThread_ && writeThread_->joinable()) {
         while(QueueSize) {
@@ -30,9 +30,19 @@ Log::~log() {
 }
 
 
-void Log::init( const char* path, const char* suffix, int maxQueueSize) {
-    isOpen = 1;
-    
+int Log::GetLevel() {
+    lock_guard<mutex> locker(mtx_);
+    return level_;
+}
+
+void Log::SetLevel(int level) {
+    lock_guard<mutex> locker(mtx_);
+    level_ = level;
+}
+
+void Log::init( int level = 1, const char* path, const char* suffix, int maxQueueSize) {
+    isOpen_ = 1;
+    level_ = level;
     if(maxQueueSize > 0) {
         isAsync_ = true;
         if(!queue_) {
@@ -53,18 +63,18 @@ void Log::init( const char* path, const char* suffix, int maxQueueSize) {
     suffix_ = suffix;
     char fileName[LOG_NAME_LEN] = {0};
     snprintf(fileName, LOG_NAME_LEN - 1, "%s/%04d_%02d_%02d%s",
-            path_, t.tm_year + 1990, t.tm_mon + 1, t.tm_today, suffix)_;
-    toDay_ = t.tm_today;        
+            path_, t.tm_year + 1990, t.tm_mon + 1, t.tm_mday, suffix_);
+    toDay_ = t.tm_mday;        
 
     {
         lock_guard<mutex> locker(mtx_);
-        buff.RetrieveAll();
+        buff_.RetrieveAll();
         if(fp_) {
             flush();
             fclose(fp_);
         }
 
-        fp_fopen(fileName, "a");
+        fp_ = fopen(fileName, "a");
         if(fp_ == nullptr) {
             mkdir(path_, 0777);
             fp_ = fopen(fileName, "a");
@@ -104,7 +114,7 @@ void Log::write(int level, const char* format, ...) {
             }
             flush();
             fclose(fp_);
-            fp_ = open(newFile, "a");
+            fp_ = fopen(newFile, "a");
             assert(fp_);
         }
     }
@@ -120,17 +130,17 @@ void Log::write(int level, const char* format, ...) {
         AppendLogLevelTitle_(level);
 
         va_start(vaList, format);
-        int m = vsnprintf(buff_.BeginWrite(), buff_.WritableBytes(), format, vaList);
+        int m = vsnprintf((char* )buff_.BeginWrite(), buff_.WritableBytes(), format, vaList);
         va_end(vaList);
 
-        buff_HasWritten(m);
-        buff_Append("\n\0", 2);
+        buff_.HasWritten(m);
+        buff_.Append("\n\0", 2);
 
         if(isAsync_ && queue_ ) {
             queue_->push_back(buff_.RetrieveAllToStr(), QueueSize);
         }
         else {
-            fputs(buff_.Peek(),fp_);
+            fputs((char* )buff_.Peek(),fp_);
         }
         buff_.RetrieveAll();
     }

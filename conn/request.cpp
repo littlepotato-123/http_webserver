@@ -168,7 +168,7 @@ void Request::ParseFromUrlencoded_() {
             v = body_.substr(j, i - j);
             j = i + 1;
             post_[k] = v;
-            LOG_DEBUG("%s = %s", key.c_str(), value.c_str());
+            LOG_DEBUG("%s = %s", k.c_str(), v.c_str());
             //printf("ParseFromUrlencoded_发生段错误4\n");
             break;
         default:

@@ -35,18 +35,19 @@ public:
         return logs.size();
     };
 
-    void pop(std::string& s , int& QueueSize) {
+    bool pop(std::string& s , int& QueueSize) {
         {
             std::unique_lock<std::mutex> locker(mtx_);
             while(!logs.size()) {
                 consumer.wait(locker);
             }
-            if(isClosed) return;
+            if(isClosed) return 0;
             s = std::move(logs.front());
             logs.pop();
             QueueSize = logs.size();    
         }
         producer.notify_one(); 
+        return true;
     }
 
     void push_back(std::string s, int& QueueSize) {

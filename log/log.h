@@ -2,7 +2,7 @@
 #ifndef LOG_H
 #define LOG_H
 
-#include <LogQueue.h>
+#include "LogQueue.h"
 #include <mutex>
 #include <string>
 #include <thread>
@@ -11,12 +11,14 @@
 #include <stdarg.h>           
 #include <assert.h>
 #include <sys/stat.h>         
-#include "blockqueue.h"
+#include "LogQueue.h"
 #include "../buffer/buffer.h"
 
 class Log {
 public:
-    void init(const char* path = "./log", 
+    int GetLevel();
+    void SetLevel(int level);
+    void init(int level, const char* path = "./log", 
                 const char* suffix =".log",
                 int maxQueueCapacity = 1024);
 
@@ -43,7 +45,7 @@ private:
 
     const char* path_;
     const char* suffix_;
-
+    int level_;
     int MAX_LINES_;
 
     int lineCount_;
@@ -55,7 +57,7 @@ private:
     bool isAsync_;
 
     FILE* fp_;
-    std::unique_ptr<LogQueue>> queue_; 
+    std::unique_ptr<LogQueue> queue_; 
     int QueueSize;
     std::unique_ptr<std::thread> writeThread_;
     std::mutex mtx_;

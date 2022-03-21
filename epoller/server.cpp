@@ -5,7 +5,7 @@ Server::Server(
             int port, int trigMode, int timeoutMS, bool OptLinger,
             int sqlPort, const char* sqlUser, const  char* sqlPwd,
             const char* dbName, int connPoolNum, int threadNum,
-            bool openLog, int logQueSize):
+            bool openLog, int logQueSize, int logLevel):
             port_(port), openLinger_(OptLinger), timeoutMS_(timeoutMS), isClose_(false),
             timer_(new HeapTimer()), threadpool_(new ThreadPool(threadNum)), epoller_(new Epoller())
     {
@@ -21,7 +21,7 @@ Server::Server(
     if(!InitSocket_()) { isClose_ = true;}
 
     if(openLog) {
-        Log::Instance()->init("./log", ".log", logQueSize);
+        Log::Instance()->init(logLevel, "./log", ".log", logQueSize);
         if(isClose_) { LOG_ERROR("========== Server init error!=========="); }
         else {
             LOG_INFO("========== Server init ==========");
@@ -30,7 +30,7 @@ Server::Server(
                             (listenEvent_ & EPOLLET ? "ET": "LT"),
                             (connEvent_ & EPOLLET ? "ET": "LT"));
             LOG_INFO("LogSys level: %d", logLevel);
-            LOG_INFO("srcDir: %s", HttpConn::srcDir);
+            LOG_INFO("srcDir: %s", Conn::srcDir);
             LOG_INFO("SqlConnPool num: %d, ThreadPool num: %d", connPoolNum, threadNum);
         }
     }
@@ -155,7 +155,7 @@ void Server::AddClient_(int fd, sockaddr_in addr) {
     }
     epoller_->AddFd(fd, EPOLLIN | connEvent_);
     SetFdNonblock(fd);
-    LOG_INFO("Client[%d] in!", users_[fd].GetFd());
+    LOG_INFO("Client[%d] in!", users_[fd]->GetFd());
 }
 
 void Server::DealListen_(){

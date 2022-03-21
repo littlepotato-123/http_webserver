@@ -24,7 +24,7 @@ public:
     Server( int port, int trigMode, int timeoutMS, bool OptLinger, 
         int sqlPort, const char* sqlUser, const  char* sqlPwd, 
         const char* dbName, int connPoolNum, int threadNum,
-        bool openLog, int logLevel, int logQueSize);
+        bool openLog,  int logQueSize, int logLevel);
 
     ~Server();
     void Start();
