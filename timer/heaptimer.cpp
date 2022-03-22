@@ -42,6 +42,7 @@ bool HeapTimer::siftdown_(size_t index, size_t n) {
 
 void HeapTimer::add(int id, int timeout, const TimeoutCallBack& cb) {
     assert(id >= 0);
+    std::lock_guard<std::mutex> locker(mtx_);
     size_t insert_point;
     if(ref_.count(id) == 0) {
         //新节点，堆尾插入，调整堆
@@ -71,6 +72,7 @@ void HeapTimer::add(int id, int timeout, const TimeoutCallBack& cb) {
 // }
 
 void HeapTimer::del_fd(int fd) {
+    std::lock_guard<std::mutex> locker(mtx_);
     if(!ref_.count(fd)) return;
     del_(ref_[fd]);
 }
@@ -93,6 +95,7 @@ void HeapTimer::del_(size_t index) {
 
 void HeapTimer::adjust(int id, int timeout) {
     assert(!heap_.empty() && ref_.count(id) > 0);
+    std::lock_guard<std::mutex> locker(mtx_);
     heap_[ref_[id]].expires = Clock::now() + MS(timeout);
     siftdown_(ref_[id], heap_.size());
 }
@@ -107,7 +110,7 @@ void HeapTimer::tick() {
             break;
         }
         node.cb();
-        //pop();
+        pop();
     }
 }
 
@@ -122,6 +125,7 @@ void HeapTimer::clear() {
 }
 
 int HeapTimer::GetNextTick() {
+    std::lock_guard<std::mutex> locker(mtx_);
     tick();
     size_t res = -1;
     if(!heap_.empty()) {
